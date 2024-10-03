@@ -1,0 +1,91 @@
+---
+title: "Analysis Using Ratio Estimators Approach"
+author: "Uma Sadhwani, Marzia Zaidi"
+date: "2024-10-03"
+format: pdf
+execute: 
+  echo: false
+  message: false
+  warning: false
+---
+
+## Instructions on How to Obtain the Data
+
+1. The data set used in this analysis can be downloaded from IPUMS USA. Type the following link into your search engine, to access the home page: https://usa.ipums.org/usa/index.shtml
+2. From here, click on the 'Get Data' button, under 'CREATE YOUR CUSTOM DATA SET'.
+3. This will redirect you to another page. Here, select the following fields: For HOUSEHOLD, choose 'GEOGRAPHIC' and then select 'STATEICP'. For PERSON, choose 'DEMOGRAPHIC' and then select 'SEX'. At this point, you should have 2 variables in your 'DATA CART', located on the top right corner of the webpage.
+4. Then, click 'SELECT SAMPLES', in the top left corner of the webpage. This should re-direct you to the SELECT SAMPLES page, with 'USA SAMPLES' choices. De-select default preferences, and ensure that only 'ACS' in the 2022 row has been selected.
+5. Then scroll all the way to the bottom, and click 'SUBMIT SAMPLE SELECTIONS'. 
+6. Then select 'VIEW CART' and 'CREATE DATA EXTRACT'
+7. From here, you will see a summary of your extract request. To download the data into a csv file format, click 'CHANGE' under the 'DATA FORMAT' row. 
+8. Finally, submit extract and download the data when it becomes available.
+
+## A Brief Overview of the Ratio Estimators Approach
+
+The ratio estimators approach is used to estimate the total number of respondents in each state by leveraging known values from one region in this case, California. The method works by calculating the ratio of respondents with doctoral degrees to the total number of respondents in California, then applying this ratio to other states. The idea is to estimate the total number of respondents by assuming similar patterns between the proportion of doctoral degree holders and the total population in each state.
+
+## Estimates and Actual Number of Respondents
+
+Below is a table showing the estimated total number of respondents based on the ratio estimators approach and the actual total number of respondents in each state. 
+
+
+Table 1. Estimated and actual respondents
+```{r}
+#| echo: false 
+#| message: false
+#| warning: false
+  
+library(tidyverse)
+
+# Load the data
+data <- read_csv("/home/rstudio/sta304.exercise5/data/usa_data.csv")
+
+# Check the column specification (optional)
+#spec(data)
+
+# Filtering the data for respondents with a doctoral degree (verify the correct code for doctoral degrees)
+doctoral_data <- data %>%
+  filter(EDUCD == 116) %>%  # Assuming '116' is the correct numeric code for doctoral degree
+  group_by(STATEICP) %>%
+  summarise(Doctoral_Respondents = n())
+
+# Get the number of doctoral respondents in California (verify '71' is the correct state code)
+california_doctoral <- doctoral_data %>%
+  filter(STATEICP == 71) %>%  # Assuming '71' is the correct numeric code for California
+  pull(Doctoral_Respondents)
+
+# Calculate the ratio for California
+california_total_respondents <- 391171  # Given total respondents in California
+ratio_california <- california_doctoral / california_total_respondents
+
+# Apply the ratio estimator to estimate total respondents in each state
+estimated_total_respondents <- doctoral_data %>%
+  mutate(Estimated_Total_Respondents = Doctoral_Respondents / ratio_california)
+```
+
+
+```{r}
+
+#| echo= false 
+
+# Group the actual total respondents by state
+actual_total_respondents <- data %>%
+  group_by(STATEICP) %>%
+  summarise(Actual_Total_Respondents = n())
+
+# Join the actual total respondents with the estimated total respondents
+comparison <- estimated_total_respondents %>%
+  left_join(actual_total_respondents, by = "STATEICP")
+
+# Create a table displaying the final comparison between estimated and actual respondents
+comparison_table <- comparison %>%
+  select(STATEICP, Doctoral_Respondents, Estimated_Total_Respondents, Actual_Total_Respondents)
+
+# Display the table
+print(comparison_table, n=51)
+```
+
+# Explanation of why they are different
+
+The reason why the actual results were different from estimates could be because the educational status can vary significantly between states due to differences in access to higher education institutions, state-level policies, and job market demands. The ratio estimators approach in this study assumes that the education level does not vary across states. Another reason might be due to socio-economic factors, such as income inequality, poor access to quality education and a cultural emphasis on higher education, which can vary greatly by state. 
+
